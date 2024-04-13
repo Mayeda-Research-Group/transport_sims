@@ -1,6 +1,6 @@
 #Create outcome models
 
-RunOutcomeModels<-function(targetdata, studydata, stdpop, Yform, Zform, YformnoZ){
+RunOutcomeModels<-function(targetdata, studydata, stdpop, Yform, Zform, YformnoZ, Aform){
 
 #Create OMs
 OM_studysamp<-lm(as.formula(paste0("Y~",Yform)), data=studydata)
@@ -57,9 +57,19 @@ OM_4_YA1<- OM_4_a %>% select(A1) %>% rename(OM_4_YA1 = A1)
 OM_4_YA0<- OM_4_a %>% select(A0) %>% rename(OM_4_YA0 = A0)
 
 
-RDs<-cbind(RD_gcomp[RD_gcomp$rep=="RD", c("OM_1", "OM_2", "OM_3")], OM_4, RD_gcomp[RD_gcomp$rep=="RD", c("OM_5")],
-           RD_gcomp_YA1 %>% select("OM_1_YA1", "OM_2_YA1", "OM_3_YA1"), OM_4_YA1, RD_gcomp_YA1 %>% select("OM_5_YA1"),
-           RD_gcomp_YA0 %>% select("OM_1_YA0", "OM_2_YA0", "OM_3_YA0"), OM_4_YA0, RD_gcomp_YA0 %>% select("OM_5_YA0"))
+#Using IPTW for OM_4 instead of standardization
+Amod_target<-glm(as.formula(paste0("A~",Aform)), data=targetdata, family = binomial())
+targetdata$predA_targmodel<-predict.glm(Amod_target, targetdata, type="response") #predicted probability of getting A
+targetdata$pA_targmodel<-ifelse(targetdata$A==1, targetdata$predA_targmodel, 1-targetdata$predA_targmodel) #predicted probability of treatment you actually got. 
+
+OM_6_YA1<-targetdata %>% filter(A==1) %>% summarise(OM_6_YA1 = weighted.mean(Y_OM4, (1/pA_targmodel))) %>% as.numeric()
+OM_6_YA0<-targetdata %>% filter(A==0) %>% summarise(OM_6_YA0 = weighted.mean(Y_OM4, (1/pA_targmodel))) %>% as.numeric()
+OM_6 <- OM_6_YA1-OM_6_YA0 %>% as.numeric()
+
+
+RDs<-cbind(RD_gcomp[RD_gcomp$rep=="RD", c("OM_1", "OM_2", "OM_3")], OM_4, RD_gcomp[RD_gcomp$rep=="RD", c("OM_5")], OM_6,
+           RD_gcomp_YA1 %>% select("OM_1_YA1", "OM_2_YA1", "OM_3_YA1"), OM_4_YA1, RD_gcomp_YA1 %>% select("OM_5_YA1"), OM_6_YA1,
+           RD_gcomp_YA0 %>% select("OM_1_YA0", "OM_2_YA0", "OM_3_YA0"), OM_4_YA0, RD_gcomp_YA0 %>% select("OM_5_YA0"), OM_6_YA0)
 return(RDs)
 }
 
@@ -67,6 +77,8 @@ return(RDs)
 #test
 # targetdata=targetsamp
 # studydata=studysamp
+# Aform=p$Aform
 # Yform=p$Yform
+# YformnoZ=p$YformnoZ
 # Zform=p$Zform
-# stdpop=StddistC1C1
+# stdpop=StddistC1C2

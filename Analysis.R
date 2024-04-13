@@ -24,6 +24,7 @@ source(paste0(getwd(),codesubpath,"/genstudysamp.R"))
 source(paste0(getwd(),codesubpath,"/CreateWeights.R"))
 source(paste0(getwd(),codesubpath,"/ApplyWeights.R"))
 source(paste0(getwd(),codesubpath,"/RunOutcomeModels.R"))
+source(paste0(getwd(),codesubpath,"/GetDRestimates.R"))
 source(paste0(getwd(),codesubpath,"/GetStdPop.R"))
 source(paste0(getwd(),codesubpath,"/SumStats.R"))
 
@@ -92,17 +93,20 @@ start<-Sys.time()
     
 #Do transport analyses
   dat<-rbind(targetsamp, studysamp)
-  dat2<-CreateWeights(dat, studysamp, p$Sform, p$Aform)
+  dat2<-CreateWeights(dat, studysamp, targetsamp, p$Sform, p$Aform)
   WTres<-ApplyWeights(data=dat2, stdpop=StddistC1C2)
   OMres<-RunOutcomeModels(targetdata=targetsamp, studydata=studysamp, 
                           stdpop=StddistC1C2, Yform=p$Yform, Zform=p$Zform, 
-                          YformnoZ=p$YformnoZ)
-  PtEst<-cbind(SMres, SMres_YA1, SMres_YA0, WTres, OMres)
+                          YformnoZ=p$YformnoZ, Aform=p$Aform)
+  DRres<-GetDRestimates(targetdata=targetsamp, studydata=studysamp, 
+                        combineddata=dat2, Aform=p$Aform, Zform=p$Zform, 
+                        Yform=p$Yform, YformnoZ=p$YformnoZ)
+  PtEst<-cbind(SMres, SMres_YA1, SMres_YA0, WTres, OMres, DRres)
 
 #Bootstrap to get CIs.
   
   #CHange this if need to overwrite # of bootstraps (n=2500 in full runs)
-  p$nboots<-2500
+  #p$nboots<-10
   
       #Create dataframe to save bootstrap estimates
         boot_res<-data.frame(STUD=rep(NA, p$nboots), 
@@ -111,27 +115,42 @@ start<-Sys.time()
                              WT_1=rep(NA, p$nboots), 
                              WT_2=rep(NA, p$nboots), 
                              WT_3=rep(NA, p$nboots),  
+                             WT_4=rep(NA, p$nboots),  
                              WT_1_YA1=rep(NA,p$nboots), 
                              WT_2_YA1=rep(NA,p$nboots), 
                              WT_3_YA1=rep(NA,p$nboots),
+                             WT_4_YA1=rep(NA,p$nboots),
                              WT_1_YA0=rep(NA,p$nboots), 
                              WT_2_YA0=rep(NA,p$nboots), 
                              WT_3_YA0=rep(NA,p$nboots),
+                             WT_4_YA0=rep(NA,p$nboots),
                              OM_1=rep(NA, p$nboots),  
                              OM_2=rep(NA, p$nboots),  
                              OM_3=rep(NA, p$nboots),  
                              OM_4=rep(NA, p$nboots), 
                              OM_5=rep(NA, p$nboots),
+                             OM_6=rep(NA, p$nboots),
                              OM_1_YA1=rep(NA,p$nboots), 
                              OM_2_YA1=rep(NA,p$nboots), 
                              OM_3_YA1=rep(NA,p$nboots), 
                              OM_4_YA1=rep(NA,p$nboots), 
                              OM_5_YA1=rep(NA,p$nboots), 
+                             OM_6_YA1=rep(NA,p$nboots), 
                              OM_1_YA0=rep(NA,p$nboots),
                              OM_2_YA0=rep(NA,p$nboots),
                              OM_3_YA0=rep(NA,p$nboots),
                              OM_4_YA0=rep(NA,p$nboots),
-                             OM_5_YA0=rep(NA,p$nboots))
+                             OM_5_YA0=rep(NA,p$nboots),
+                             OM_6_YA0=rep(NA,p$nboots),
+                             DR_1=rep(NA, p$nboots), 
+                             DR_2=rep(NA, p$nboots), 
+                             DR_3=rep(NA, p$nboots), 
+                             DR_1_YA1=rep(NA,p$nboots), 
+                             DR_2_YA1=rep(NA,p$nboots), 
+                             DR_3_YA1=rep(NA,p$nboots),
+                             DR_1_YA0=rep(NA,p$nboots), 
+                             DR_2_YA0=rep(NA,p$nboots), 
+                             DR_3_YA0=rep(NA,p$nboots))
         
         
       #run bootstrap
@@ -165,17 +184,20 @@ start<-Sys.time()
             
         #Run other transport analyses in boot samples
         boot_dat<-rbind(boot_targetsamp, boot_studysamp)
-        boot_dat2<-CreateWeights(boot_dat, boot_studysamp,p$Sform,p$Aform)
+        boot_dat2<-CreateWeights(boot_dat, boot_studysamp,boot_targetsamp, p$Sform,p$Aform)
         boot_WTres<-ApplyWeights(boot_dat2, StddistC1C2)
         boot_OMres<-RunOutcomeModels(targetdata=boot_targetsamp,
                                      studydata=boot_studysamp,
                                      stdpop = StddistC1C2,
                                      Yform=p$Yform,
                                      Zform=p$Zform,
-                                     YformnoZ=p$YformnoZ)
-        
+                                     YformnoZ=p$YformnoZ,
+                                     Aform=p$Aform)
+        boot_DRres<-GetDRestimates(targetdata=boot_targetsamp, studydata=boot_studysamp, 
+                              combineddata=boot_dat2, Aform=p$Aform, Zform=p$Zform, 
+                              Yform=p$Yform, YformnoZ=p$YformnoZ)
         #save boot estimates
-        boot_res[j,]<-cbind(boot_SMres, boot_SMres_YA1, boot_SMres_YA0, boot_WTres, boot_OMres)
+        boot_res[j,]<-cbind(boot_SMres, boot_SMres_YA1, boot_SMres_YA0, boot_WTres, boot_OMres, boot_DRres)
         
         }
         
@@ -186,9 +208,17 @@ start<-Sys.time()
 
 #Aggregate, format, and save results      
     results<-rbind(PtEst, CIs, bootSEs) %>% cbind(data.frame(est=c("PtEst", "LCI", "UCI", "SE"))) %>% 
-      pivot_wider(.,names_from=est, values_from=c("STUD", "WT_1", "WT_2", "WT_3", "OM_1", "OM_2", "OM_3", "OM_4", "OM_5",
-                                                  "STUD_YA1", "WT_1_YA1", "WT_2_YA1", "WT_3_YA1", "OM_1_YA1", "OM_2_YA1", "OM_3_YA1", "OM_4_YA1", "OM_5_YA1",
-                                                  "STUD_YA0", "WT_1_YA0", "WT_2_YA0", "WT_3_YA0", "OM_1_YA0", "OM_2_YA0", "OM_3_YA0", "OM_4_YA0", "OM_5_YA0")) 
+      pivot_wider(.,names_from=est, values_from=c("STUD", "WT_1", "WT_2", "WT_3", "WT_4", 
+                                                  "OM_1", "OM_2", "OM_3", "OM_4", "OM_5", "OM_6", 
+                                                  "DR_1", "DR_2", "DR_3",
+                                                  
+                                                  "STUD_YA1", "WT_1_YA1", "WT_2_YA1", "WT_3_YA1", "WT_4_YA1", 
+                                                  "OM_1_YA1", "OM_2_YA1", "OM_3_YA1", "OM_4_YA1", "OM_5_YA1", "OM_6_YA1",
+                                                  "DR_1_YA1", "DR_2_YA1", "DR_3_YA1",
+                                                  
+                                                  "STUD_YA0", "WT_1_YA0", "WT_2_YA0", "WT_3_YA0", "WT_4_YA0", 
+                                                  "OM_1_YA0", "OM_2_YA0", "OM_3_YA0", "OM_4_YA0", "OM_5_YA0", "OM_6_YA0",
+                                                  "DR_1_YA0", "DR_2_YA0", "DR_3_YA0")) 
     
     #Stop timiming and calculate run time
     time_min<-as.numeric(difftime(Sys.time(), start, units = "mins"))   
@@ -201,31 +231,46 @@ start<-Sys.time()
                          "WT_1_PtEst", "WT_1_LCI", "WT_1_UCI", "WT_1_bootSE",
                          "WT_2_PtEst", "WT_2_LCI", "WT_2_UCI", "WT_2_bootSE",      
                          "WT_3_PtEst", "WT_3_LCI", "WT_3_UCI", "WT_3_bootSE",
+                         "WT_4_PtEst", "WT_4_LCI", "WT_4_UCI", "WT_4_bootSE",
                          "OM_1_PtEst", "OM_1_LCI", "OM_1_UCI", "OM_1_bootSE",
-                         "OM_2_PtEst", "OM_2_LCI","OM_2_UCI", "OM_2_bootSE",
+                         "OM_2_PtEst", "OM_2_LCI", "OM_2_UCI", "OM_2_bootSE",
                          "OM_3_PtEst", "OM_3_LCI", "OM_3_UCI", "OM_3_bootSE",
                          "OM_4_PtEst", "OM_4_LCI", "OM_4_UCI", "OM_4_bootSE",
                          "OM_5_PtEst", "OM_5_LCI", "OM_5_UCI", "OM_5_bootSE",
+                         "OM_6_PtEst", "OM_6_LCI", "OM_6_UCI", "OM_6_bootSE",
+                         "DR_1_PtEst", "DR_1_LCI", "DR_1_UCI", "DR_1_bootSE",
+                         "DR_2_PtEst", "DR_2_LCI", "DR_2_UCI", "DR_2_bootSE",
+                         "DR_3_PtEst", "DR_3_LCI", "DR_3_UCI", "DR_3_bootSE",
                          
                          "STUD_YA1_PtEst", "STUD_YA1_LCI", "STUD_YA1_UCI", "STUD_YA1_bootSE",
                          "WT_1_YA1_PtEst", "WT_1_YA1_LCI", "WT_1_YA1_UCI", "WT_1_YA1_bootSE",
                          "WT_2_YA1_PtEst", "WT_2_YA1_LCI", "WT_2_YA1_UCI", "WT_2_YA1_bootSE",      
                          "WT_3_YA1_PtEst", "WT_3_YA1_LCI", "WT_3_YA1_UCI", "WT_3_YA1_bootSE",
+                         "WT_4_YA1_PtEst", "WT_4_YA1_LCI", "WT_4_YA1_UCI", "WT_4_YA1_bootSE",
                          "OM_1_YA1_PtEst", "OM_1_YA1_LCI", "OM_1_YA1_UCI", "OM_1_YA1_bootSE",
                          "OM_2_YA1_PtEst", "OM_2_YA1_LCI", "OM_2_YA1_UCI", "OM_2_YA1_bootSE",
                          "OM_3_YA1_PtEst", "OM_3_YA1_LCI", "OM_3_YA1_UCI", "OM_3_YA1_bootSE",
                          "OM_4_YA1_PtEst", "OM_4_YA1_LCI", "OM_4_YA1_UCI", "OM_4_YA1_bootSE",
                          "OM_5_YA1_PtEst", "OM_5_YA1_LCI", "OM_5_YA1_UCI", "OM_5_YA1_bootSE",
+                         "OM_6_YA1_PtEst", "OM_6_YA1_LCI", "OM_6_YA1_UCI", "OM_6_YA1_bootSE",
+                         "DR_1_YA1_PtEst", "DR_1_YA1_LCI", "DR_1_YA1_UCI", "DR_1_YA1_bootSE",
+                         "DR_2_YA1_PtEst", "DR_2_YA1_LCI", "DR_2_YA1_UCI", "DR_2_YA1_bootSE",
+                         "DR_3_YA1_PtEst", "DR_3_YA1_LCI", "DR_3_YA1_UCI", "DR_3_YA1_bootSE",
                          
                          "STUD_YA0_PtEst", "STUD_YA0_LCI", "STUD_YA0_UCI", "STUD_YA0_bootSE",
                          "WT_1_YA0_PtEst", "WT_1_YA0_LCI", "WT_1_YA0_UCI", "WT_1_YA0_bootSE",
                          "WT_2_YA0_PtEst", "WT_2_YA0_LCI", "WT_2_YA0_UCI", "WT_2_YA0_bootSE",      
                          "WT_3_YA0_PtEst", "WT_3_YA0_LCI", "WT_3_YA0_UCI", "WT_3_YA0_bootSE",
+                         "WT_4_YA0_PtEst", "WT_4_YA0_LCI", "WT_4_YA0_UCI", "WT_4_YA0_bootSE",
                          "OM_1_YA0_PtEst", "OM_1_YA0_LCI", "OM_1_YA0_UCI", "OM_1_YA0_bootSE",
                          "OM_2_YA0_PtEst", "OM_2_YA0_LCI", "OM_2_YA0_UCI", "OM_2_YA0_bootSE",
                          "OM_3_YA0_PtEst", "OM_3_YA0_LCI", "OM_3_YA0_UCI", "OM_3_YA0_bootSE",
                          "OM_4_YA0_PtEst", "OM_4_YA0_LCI", "OM_4_YA0_UCI", "OM_4_YA0_bootSE",
                          "OM_5_YA0_PtEst", "OM_5_YA0_LCI", "OM_5_YA0_UCI", "OM_5_YA0_bootSE",
+                         "OM_6_YA0_PtEst", "OM_6_YA0_LCI", "OM_6_YA0_UCI", "OM_6_YA0_bootSE",
+                         "DR_1_YA0_PtEst", "DR_1_YA0_LCI", "DR_1_YA0_UCI", "DR_1_YA0_bootSE",
+                         "DR_2_YA0_PtEst", "DR_2_YA0_LCI", "DR_2_YA0_UCI", "DR_2_YA0_bootSE",
+                         "DR_3_YA0_PtEst", "DR_3_YA0_LCI", "DR_3_YA0_UCI", "DR_3_YA0_bootSE",
                          "n_targsamp", 
                          "C1prev_A0_targsamp", "C1prev_A1_targsamp", "C2mean_A0_targsamp", "C2mean_A1_targsamp", 
                          "Aprev_targsamp", 
@@ -292,15 +337,32 @@ start<-Sys.time()
 
 
 
-#Unit tests
-# 
-# Scenarios<-c("S1")#, "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10")
-# Scenario<-"6"
-# for (j in Scenarios){
-#   for (i in 1:10){
-#     set.seed(12345)
-# replicate(5, RunSim(Scenario=Scenario))
-#   }
-# }
-# 
+#Unit test on local machine
+  #just function -- no replicates
+  # Scenario<-"4"
+  # load(paste0(path_to_data,"/targetpop_S",Scenario,".Rdata"))
+  # load(paste0(path_to_data,"/params_beta0_S",Scenario,".Rdata"))
+  # row<-1
+  # seed<-as.numeric(12345)
+  # set.seed(seed)
+
+  
+  
+  
+  
+  # #with replicates
+  # Scenarios<-c("S9")#, "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10")
+  # Scenario<-"9"
+  # 
+  # for (j in Scenario){
+  #   load(paste0(path_to_data,"/targetpop_S",Scenario,".Rdata"))
+  #   load(paste0(path_to_data,"/params_beta0_S",Scenario,".Rdata"))
+  # 
+  #   row<-1
+  #   seed<-as.numeric(12345)
+  #   set.seed(seed)
+  #   replicate(20, RunSim(Scenario=Scenario))
+  #   }
+
+
 
