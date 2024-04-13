@@ -20,7 +20,7 @@ Parameters and data generation set-up
    
 Transportability analysis
 
-1.	Analysis.R: All the analysis is run in this script. There is a big function that first generates a simple random sample of the target population, and then calls scripts 2-7 below to conduct the analyses, including 2500 bootstraps for each run. The remaining code saves output (from each run, n=5000), not each bootstrap within each run, and includes some code for Hoffman to run the script, including seeds. 
+1.	Analysis.R: All the analysis is run in this script. There is a big function that first generates a simple random sample of the target population, and then calls scripts 2-8 below to conduct the analyses, including 2500 bootstraps for each run. The remaining code saves output (from each run, n=5000), not each bootstrap within each run, and includes some code for Hoffman to run the script, including seeds. 
 
 2.	SumStats.R: Short function that calculates means and SDs of variables for samples (both SRS of target and study sample)
 
@@ -28,14 +28,15 @@ Transportability analysis
 
 4.	genstudysamp.R: creates a sampling variable S in target population based on S model params that is used to “select” people in each simulation run. Allows for some variability in the # sampled each time, but the goal is to sample 3,000 people. 
 
-5.	CreateWeights.R: This is a function that creates 2 sets of IOSW weights. Both use a logistic regression model for selection (representative sample of target vs. S=1 from genstudysamp.R above), and the second also models A given C in the study sample, as an IPTW to control confounding. 
+5.	CreateWeights.R: This is a function that creates several sets of IOSW weights. Both use a logistic regression model for selection (representative sample of target vs. S=1 from genstudysamp.R above), and the second also models A given C in the study sample, as an IPTW to control confounding. 
 
-6.	ApplyWeights.R: This function applies the 2 versions of weights (DW weights are just ioSW, ID weights are IOSW*IPTW), and a third version (DW weights, with standardization over C later) created above to estimate the target estimand (ATE). 
+6.	ApplyWeights.R: This function applies the weights created above to estimate the target estimands (PO means and TATE). 
 
-7.	RunOutcomeModels.R: This script runs 5 versions of outcome modeling. It first runs an outcome model for Y in the study sample, and models for the mediator Z in both the study sample and SRS of target. Then, it creates exposed and unexposed replicates of the SRS of the target to predict Y, and Z (depending on the version of the OM estimator), and calculates ATEs. The final approach uses just the OM for Y to predict Y in the SRS of the target,  but standardizes to the distribution of C when estimating ATE.
+7.	RunOutcomeModels.R: This script runs several versions of outcome modeling to estimate PO means and TATE
 
+8.	GetDREstimates.R: This script runs several doubly robust estimators, combining unbiased IOSW and OM estimators to estimate PO means and TATE. 
 
 Results summary 
-1.	ResultsPlots.R: Loads in and summarizes data for each scenario, including extra runs to get to 5,000 total per scenario, then creates plots with final output. 
+1.	ResultsPlotsR1.R: Loads in and summarizes data for each scenario, including extra runs to get to 5,000 total per scenario, then creates plots with final output. 
 
-2.	Suppdata.R: This script creates the table of parameters for the supplement, and  runs a mini version of the simulation (1 run each of S4 and S9) to explain results for a couple of key estimators for the supplemental materials.
+2.	SuppdataR1.R: This script creates the table of parameters for the supplement, and  runs a mini version of the simulation (1 run each of S4 and S9) to explain results for a couple of key estimators for the supplemental materials.
