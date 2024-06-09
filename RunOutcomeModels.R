@@ -62,8 +62,14 @@ Amod_target<-glm(as.formula(paste0("A~",Aform)), data=targetdata, family = binom
 targetdata$predA_targmodel<-predict.glm(Amod_target, targetdata, type="response") #predicted probability of getting A
 targetdata$pA_targmodel<-ifelse(targetdata$A==1, targetdata$predA_targmodel, 1-targetdata$predA_targmodel) #predicted probability of treatment you actually got. 
 
-OM_6_YA1<-targetdata %>% filter(A==1) %>% summarise(OM_6_YA1 = weighted.mean(Y_OM4, (1/pA_targmodel))) %>% as.numeric()
-OM_6_YA0<-targetdata %>% filter(A==0) %>% summarise(OM_6_YA0 = weighted.mean(Y_OM4, (1/pA_targmodel))) %>% as.numeric()
+#Stabilize iptw weights to mean 1
+targetdata$iptw_A_uns<-1/targetdata$pA_targmodel #inverse of pA
+stb_factor1<- targetdata %>% summarise(mean_iptw_a_uns = mean(iptw_A_uns)) %>% as.numeric()
+targetdata$iptw_A<-targetdata$iptw_A_uns/stb_factor1
+summary(targetdata$iptw_A)
+
+OM_6_YA1<-targetdata %>% filter(A==1) %>% summarise(OM_6_YA1 = weighted.mean(Y_OM4, iptw_A)) %>% as.numeric()
+OM_6_YA0<-targetdata %>% filter(A==0) %>% summarise(OM_6_YA0 = weighted.mean(Y_OM4, iptw_A)) %>% as.numeric()
 OM_6 <- OM_6_YA1-OM_6_YA0 %>% as.numeric()
 
 
